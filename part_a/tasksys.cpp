@@ -1,5 +1,9 @@
 #include "tasksys.h"
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 
+#include <stdio.h>
 
 IRunnable::~IRunnable() {}
 
@@ -53,22 +57,33 @@ TaskSystemParallelSpawn::TaskSystemParallelSpawn(int num_threads): ITaskSystem(n
     // Implementations are free to add new class member variables
     // (requiring changes to tasksys.h).
     //
+    this->num_threads = num_threads;
 }
 
 TaskSystemParallelSpawn::~TaskSystemParallelSpawn() {}
 
 void TaskSystemParallelSpawn::run(IRunnable* runnable, int num_total_tasks) {
-
-
     //
     // TODO: CS149 students will modify the implementation of this
     // method in Part A.  The implementation provided below runs all
     // tasks sequentially on the calling thread.
     //
-
-    for (int i = 0; i < num_total_tasks; i++) {
-        runnable->runTask(i, num_total_tasks);
+    printf("==============================================================\n");
+    printf("Starting %d threads for signal-and-waiting...\n", num_threads);
+    bool done = false;
+    std::thread* threads = new std::thread[num_threads];
+    for(int counter = 0; counter < num_total_tasks; counter++){
+        ThreadState* thread_state = new ThreadState(runnable, counter, num_total_tasks);
+        //threads[counter] = std::thread(&TaskSystemParallelSpawn::runTask, thread_state);
+        threads[counter] = std::thread(&TaskSystemParallelSpawn::runTask2, 0);
     }
+    for (int i = 0; i < num_threads; i++) {
+        threads[i].join();
+    }
+}
+
+void TaskSystemParallelSpawn::runTask(ThreadState* thread_state){
+    thread_state->runnable_->runTask(thread_state->task_id_, thread_state->num_total_tasks_);
 }
 
 TaskID TaskSystemParallelSpawn::runAsyncWithDeps(IRunnable* runnable, int num_total_tasks,

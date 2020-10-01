@@ -19,6 +19,22 @@ class TaskSystemSerial: public ITaskSystem {
         void sync();
 };
 
+
+
+class ThreadState {
+    public:
+        IRunnable* runnable_;
+        int task_id_;
+        int num_total_tasks_;
+        ThreadState(IRunnable* runnable, int task_id, int num_total_tasks) {
+            runnable_ = runnable;
+            task_id_ = task_id;
+            num_total_tasks_ = num_total_tasks;
+        }
+        ~ThreadState() {
+        }
+};
+
 /*
  * TaskSystemParallelSpawn: This class is the student's implementation of a
  * parallel task execution engine that spawns threads in every run()
@@ -34,6 +50,10 @@ class TaskSystemParallelSpawn: public ITaskSystem {
         TaskID runAsyncWithDeps(IRunnable* runnable, int num_total_tasks,
                                 const std::vector<TaskID>& deps);
         void sync();
+
+        int num_threads;
+        void runTask(ThreadState* thread_state);
+        void runTask2(int a){return;};
 };
 
 /*
