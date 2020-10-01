@@ -53,7 +53,6 @@ class TaskSystemParallelSpawn: public ITaskSystem {
 
         int num_threads;
         void runTask(ThreadState* thread_state);
-        void runTask2(int a){return;};
 };
 
 /*

@@ -50,6 +50,11 @@ const char* TaskSystemParallelSpawn::name() {
     return "Parallel + Always Spawn";
 }
 
+void TaskSystemParallelSpawn::runTask(ThreadState* thread_state){
+
+    thread_state->runnable_->runTask(thread_state->task_id_, thread_state->num_total_tasks_);
+}
+
 TaskSystemParallelSpawn::TaskSystemParallelSpawn(int num_threads): ITaskSystem(num_threads) {
     //
     // TODO: CS149 student implementations may decide to perform setup
@@ -70,21 +75,19 @@ void TaskSystemParallelSpawn::run(IRunnable* runnable, int num_total_tasks) {
     //
     printf("==============================================================\n");
     printf("Starting %d threads for signal-and-waiting...\n", num_threads);
-    bool done = false;
     std::thread* threads = new std::thread[num_threads];
     for(int counter = 0; counter < num_total_tasks; counter++){
         ThreadState* thread_state = new ThreadState(runnable, counter, num_total_tasks);
         //threads[counter] = std::thread(&TaskSystemParallelSpawn::runTask, thread_state);
-        threads[counter] = std::thread(&TaskSystemParallelSpawn::runTask2, 0);
+        threads[counter % num_threads] = std::thread(&TaskSystemParallelSpawn::name);
     }
     for (int i = 0; i < num_threads; i++) {
-        threads[i].join();
+        //threads[i].join();
     }
 }
 
-void TaskSystemParallelSpawn::runTask(ThreadState* thread_state){
-    thread_state->runnable_->runTask(thread_state->task_id_, thread_state->num_total_tasks_);
-}
+//void TaskSystemParallelSpawn::runTask(ThreadState* thread_state){
+//}
 
 TaskID TaskSystemParallelSpawn::runAsyncWithDeps(IRunnable* runnable, int num_total_tasks,
                                                  const std::vector<TaskID>& deps) {
