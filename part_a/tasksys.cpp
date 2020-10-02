@@ -117,9 +117,7 @@ const char* TaskSystemParallelThreadPoolSpinning::name() {
 void TaskSystemParallelThreadPoolSpinning::spinningTask(){
     int iTask = 0;
     int nTotTask = 0;
-    int nRemainingTask = 0;
     while(spinning){
-        //printf("task run aa :%d %d \n", iTask, thread_state->num_total_tasks_);
         thread_state->mutex_->lock();
         iTask = ++thread_state->counter_;
         if(iTask < thread_state->num_total_tasks_ ){
@@ -129,26 +127,8 @@ void TaskSystemParallelThreadPoolSpinning::spinningTask(){
 
             thread_state->mutex_->lock();
             thread_state->num_remaining_tasks--;
-            thread_state->mutex_->unlock();
-            //printf("task run 1 :%d %d \n", iTask, thread_state->num_remaining_tasks);
         }
-        else if(thread_state->num_remaining_tasks == 0){
-            //thread_state->num_remaining_tasks--;
-            thread_state->mutex_->unlock();
-            //printf("task run 2 :%d %d \n", iTask, thread_state->num_remaining_tasks);
-            //thread_state->condition_variable_->notify_all();
-            //printf("release!\n");
-        }
-        //printf("out task run:%d, remain:%d\n", iTask, thread_state->num_remaining_tasks);
-        /*thread_state->mutex_->lock();
-        iTask = ++thread_state->counter_;
         thread_state->mutex_->unlock();
-        if(iTask < thread_state->num_total_tasks_){
-            printf("task run:%d\n", iTask);
-            thread_state->runnable_->runTask(iTask, thread_state->num_total_tasks_);
-        } else{
-            thread_state->condition_variable_->notify_all();
-        }*/
     }
 }
 
@@ -173,6 +153,8 @@ TaskSystemParallelThreadPoolSpinning::~TaskSystemParallelThreadPoolSpinning() {
     for (int i = 0; i < this->num_threads; i++) {
         this->threads[i].join();
     }
+    delete thread_state;
+    delete[] threads;
 }
 
 void TaskSystemParallelThreadPoolSpinning::run(IRunnable* runnable, int num_total_tasks) {
@@ -189,13 +171,16 @@ void TaskSystemParallelThreadPoolSpinning::run(IRunnable* runnable, int num_tota
     thread_state->runnable_ = runnable;
     thread_state->num_total_tasks_ = num_total_tasks;
     thread_state->num_remaining_tasks = num_total_tasks;
+    num_remaining = num_total_tasks;
     thread_state->counter_ = -1;
     thread_state->mutex_->unlock();
-    printf("==============================================================\n");
-    printf("Starting %d threads and %d tasks for TaskSystemParallelThreadPoolSpinning...\n", num_threads, num_total_tasks);
     while(true){
-        printf("whietrue %d\n", thread_state->num_remaining_tasks);
-        if(thread_state->num_remaining_tasks <= 0) break;
+        thread_state->mutex_->lock();
+        if(thread_state->num_remaining_tasks <= 0) {
+            thread_state->mutex_->unlock();
+            break;
+        }
+        thread_state->mutex_->unlock();
     }
 }
 

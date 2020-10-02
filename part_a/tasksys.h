@@ -82,6 +82,7 @@ class TaskSystemParallelThreadPoolSpinning: public ITaskSystem {
                                 const std::vector<TaskID>& deps);
         void sync();
         int num_threads;
+        int num_remaining;
         std::thread* threads;
         ThreadState* thread_state;
         bool spinning;
