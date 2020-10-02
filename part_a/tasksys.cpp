@@ -51,8 +51,18 @@ const char* TaskSystemParallelSpawn::name() {
 }
 
 void TaskSystemParallelSpawn::runTask(ThreadState* thread_state){
-
-    thread_state->runnable_->runTask(thread_state->task_id_, thread_state->num_total_tasks_);
+    int iTask = 0;
+    bool done = false;
+    while(!done){
+        thread_state->mutex_->lock();
+        iTask = ++thread_state->counter_;
+        thread_state->mutex_->unlock();
+        if(iTask < thread_state->num_total_tasks_){
+            thread_state->runnable_->runTask(iTask, thread_state->num_total_tasks_);
+        } else{
+            done = true;
+        }
+    }
 }
 
 TaskSystemParallelSpawn::TaskSystemParallelSpawn(int num_threads): ITaskSystem(num_threads) {
@@ -74,20 +84,16 @@ void TaskSystemParallelSpawn::run(IRunnable* runnable, int num_total_tasks) {
     // tasks sequentially on the calling thread.
     //
     printf("==============================================================\n");
-    printf("Starting %d threads for signal-and-waiting...\n", num_threads);
+    printf("Starting %d threads for TaskSystemParallelSpawn..\n", num_threads);
     std::thread* threads = new std::thread[num_threads];
-    for(int counter = 0; counter < num_total_tasks; counter++){
-        ThreadState* thread_state = new ThreadState(runnable, counter, num_total_tasks);
-        //threads[counter] = std::thread(&TaskSystemParallelSpawn::runTask, thread_state);
-        threads[counter % num_threads] = std::thread(&TaskSystemParallelSpawn::name);
+    ThreadState* thread_state = new ThreadState(runnable, num_total_tasks);
+    for(int i = 0; i < num_threads; i++){
+        threads[i] = std::thread(&TaskSystemParallelSpawn::runTask, this, thread_state);
     }
     for (int i = 0; i < num_threads; i++) {
-        //threads[i].join();
+        threads[i].join();
     }
 }
-
-//void TaskSystemParallelSpawn::runTask(ThreadState* thread_state){
-//}
 
 TaskID TaskSystemParallelSpawn::runAsyncWithDeps(IRunnable* runnable, int num_total_tasks,
                                                  const std::vector<TaskID>& deps) {
@@ -108,6 +114,44 @@ const char* TaskSystemParallelThreadPoolSpinning::name() {
     return "Parallel + Thread Pool + Spin";
 }
 
+void TaskSystemParallelThreadPoolSpinning::spinningTask(){
+    int iTask = 0;
+    int nTotTask = 0;
+    int nRemainingTask = 0;
+    while(spinning){
+        //printf("task run aa :%d %d \n", iTask, thread_state->num_total_tasks_);
+        thread_state->mutex_->lock();
+        iTask = ++thread_state->counter_;
+        if(iTask < thread_state->num_total_tasks_ ){
+            nTotTask = thread_state->num_total_tasks_;
+            thread_state->mutex_->unlock();
+            thread_state->runnable_->runTask(iTask, nTotTask);
+
+            thread_state->mutex_->lock();
+            thread_state->num_remaining_tasks--;
+            thread_state->mutex_->unlock();
+            //printf("task run 1 :%d %d \n", iTask, thread_state->num_remaining_tasks);
+        }
+        else if(thread_state->num_remaining_tasks == 0){
+            //thread_state->num_remaining_tasks--;
+            thread_state->mutex_->unlock();
+            //printf("task run 2 :%d %d \n", iTask, thread_state->num_remaining_tasks);
+            //thread_state->condition_variable_->notify_all();
+            //printf("release!\n");
+        }
+        //printf("out task run:%d, remain:%d\n", iTask, thread_state->num_remaining_tasks);
+        /*thread_state->mutex_->lock();
+        iTask = ++thread_state->counter_;
+        thread_state->mutex_->unlock();
+        if(iTask < thread_state->num_total_tasks_){
+            printf("task run:%d\n", iTask);
+            thread_state->runnable_->runTask(iTask, thread_state->num_total_tasks_);
+        } else{
+            thread_state->condition_variable_->notify_all();
+        }*/
+    }
+}
+
 TaskSystemParallelThreadPoolSpinning::TaskSystemParallelThreadPoolSpinning(int num_threads): ITaskSystem(num_threads) {
     //
     // TODO: CS149 student implementations may decide to perform setup
@@ -115,9 +159,21 @@ TaskSystemParallelThreadPoolSpinning::TaskSystemParallelThreadPoolSpinning(int n
     // Implementations are free to add new class member variables
     // (requiring changes to tasksys.h).
     //
+    this->num_threads = num_threads;
+    spinning = true;
+    thread_state = new ThreadState(nullptr, 0);
+    threads = new std::thread[num_threads];
+    for(int i = 0; i < num_threads; i++){
+        this->threads[i] = std::thread(&TaskSystemParallelThreadPoolSpinning::spinningTask, this);
+    }
 }
 
-TaskSystemParallelThreadPoolSpinning::~TaskSystemParallelThreadPoolSpinning() {}
+TaskSystemParallelThreadPoolSpinning::~TaskSystemParallelThreadPoolSpinning() {
+    this->spinning = false;
+    for (int i = 0; i < this->num_threads; i++) {
+        this->threads[i].join();
+    }
+}
 
 void TaskSystemParallelThreadPoolSpinning::run(IRunnable* runnable, int num_total_tasks) {
 
@@ -128,8 +184,18 @@ void TaskSystemParallelThreadPoolSpinning::run(IRunnable* runnable, int num_tota
     // tasks sequentially on the calling thread.
     //
 
-    for (int i = 0; i < num_total_tasks; i++) {
-        runnable->runTask(i, num_total_tasks);
+
+    thread_state->mutex_->lock();
+    thread_state->runnable_ = runnable;
+    thread_state->num_total_tasks_ = num_total_tasks;
+    thread_state->num_remaining_tasks = num_total_tasks;
+    thread_state->counter_ = -1;
+    thread_state->mutex_->unlock();
+    printf("==============================================================\n");
+    printf("Starting %d threads and %d tasks for TaskSystemParallelThreadPoolSpinning...\n", num_threads, num_total_tasks);
+    while(true){
+        printf("whietrue %d\n", thread_state->num_remaining_tasks);
+        if(thread_state->num_remaining_tasks <= 0) break;
     }
 }
 

@@ -2,6 +2,9 @@
 #define _TASKSYS_H
 
 #include "itasksys.h"
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 
 /*
  * TaskSystemSerial: This class is the student's implementation of a
@@ -21,17 +24,25 @@ class TaskSystemSerial: public ITaskSystem {
 
 
 
-class ThreadState {
+struct ThreadState {
     public:
         IRunnable* runnable_;
-        int task_id_;
+        std::condition_variable* condition_variable_;
+        std::mutex* mutex_;
         int num_total_tasks_;
-        ThreadState(IRunnable* runnable, int task_id, int num_total_tasks) {
+        int num_remaining_tasks;
+        int counter_;
+        ThreadState(IRunnable* runnable, int num_total_tasks) {
+            condition_variable_ = new std::condition_variable();
+            mutex_ = new std::mutex();
             runnable_ = runnable;
-            task_id_ = task_id;
+            counter_ = -1;
             num_total_tasks_ = num_total_tasks;
+            num_remaining_tasks = num_total_tasks;
         }
         ~ThreadState() {
+            delete condition_variable_;
+            delete mutex_;
         }
 };
 
@@ -70,6 +81,11 @@ class TaskSystemParallelThreadPoolSpinning: public ITaskSystem {
         TaskID runAsyncWithDeps(IRunnable* runnable, int num_total_tasks,
                                 const std::vector<TaskID>& deps);
         void sync();
+        int num_threads;
+        std::thread* threads;
+        ThreadState* thread_state;
+        bool spinning;
+        void spinningTask();
 };
 
 /*
