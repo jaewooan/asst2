@@ -31,6 +31,7 @@ struct ThreadState {
         std::mutex* mutex_;
         int num_total_tasks_;
         int num_remaining_tasks;
+        int num_idle;
         int counter_;
         ThreadState(IRunnable* runnable, int num_total_tasks) {
             condition_variable_ = new std::condition_variable();
@@ -39,6 +40,7 @@ struct ThreadState {
             counter_ = -1;
             num_total_tasks_ = num_total_tasks;
             num_remaining_tasks = num_total_tasks;
+            num_idle = 0;
         }
         ~ThreadState() {
             delete condition_variable_;
@@ -104,6 +106,25 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         TaskID runAsyncWithDeps(IRunnable* runnable, int num_total_tasks,
                                 const std::vector<TaskID>& deps);
         void sync();
+        int num_threads;
+        int num_idle_threads;
+        int num_remaining;
+        int nFinishedTasks;
+        std::thread* threads;
+        ThreadState* thread_state;
+        bool spinning;
+        std::mutex* mutex_main;
+        std::mutex* mutex_threads;
+        std::condition_variable* cv_main;
+        std::condition_variable* cv_threads;
+        std::vector<std::mutex*> mutex_thread;
+        std::vector<std::condition_variable*> cv_thread;
+        bool isIdle;
+        int num_Idle;
+
+
+        void signalTask();
+        void waitTask(int iThread);
 };
 
 #endif
