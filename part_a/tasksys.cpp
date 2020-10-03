@@ -249,14 +249,14 @@ void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
             thread_state->mutex_->unlock();
             cv_main->notify_all();
             // then sleep
-            //printf("waited %d\n", iThread);
+            printf("waited %d\n", iThread);
+            cv_thread[iThread]->wait(lk, [this]{return thread_state->counter_ < thread_state->num_total_tasks_- 1;});
+            printf("release %d \n", iThread);
             thread_state->mutex_->lock();
             thread_state->num_idle--;
             printf("num_idle in 3: %d \n", thread_state->num_idle);
             printf("counter in 4: %d \n", thread_state->counter_);
             thread_state->mutex_->unlock();
-            cv_thread[iThread]->wait(lk, [this]{return thread_state->counter_ < thread_state->num_total_tasks_- 1;});
-            printf("release %d \n", iThread);
 
 
             //cv_threads->wait(lk, [=]{return (thread_state->num_idle == 0);});
@@ -367,13 +367,17 @@ TaskSystemParallelThreadPoolSleeping::~TaskSystemParallelThreadPoolSleeping() {
         //}
         thread_state->condition_variable_->notify_all();
     }*/
-    do{
-        for(int i = 0; i < num_threads; i++){
-            cv_thread[i]->notify_all();
-        }
-    } while(thread_state->num_idle > 0);
-
+    //for(int i = 0; i < num_threads; i++){
+    //    delete cv_thread[i];
+    //}
     for (int i = 0; i < this->num_threads; i++) {
+
+        thread_state->mutex_->lock();
+        thread_state->counter_ = -1;
+        printf("final: %d\n", thread_state->counter_);
+        cv_thread[i]->notify_all();
+
+        thread_state->mutex_->unlock();
         this->threads[i].join();
     }
     delete thread_state;
