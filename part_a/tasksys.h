@@ -30,7 +30,6 @@ struct ThreadState {
         std::mutex* mutex_;
         int num_total_tasks_;
         int num_remaining_tasks;
-        int num_idle;
         int counter_;
         ThreadState(IRunnable* runnable, int num_total_tasks) {
             mutex_ = new std::mutex();
@@ -38,7 +37,6 @@ struct ThreadState {
             counter_ = -1;
             num_total_tasks_ = num_total_tasks;
             num_remaining_tasks = num_total_tasks;
-            num_idle = 0;
         }
         ~ThreadState() {
             delete mutex_;
@@ -105,6 +103,7 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         void sync();
         int num_threads;
         int nFinishedTasks;
+        int num_idle;
         std::thread* threads;
         ThreadState* thread_state;
         bool spinning;
