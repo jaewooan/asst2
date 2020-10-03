@@ -27,14 +27,12 @@ class TaskSystemSerial: public ITaskSystem {
 struct ThreadState {
     public:
         IRunnable* runnable_;
-        std::condition_variable* condition_variable_;
         std::mutex* mutex_;
         int num_total_tasks_;
         int num_remaining_tasks;
         int num_idle;
         int counter_;
         ThreadState(IRunnable* runnable, int num_total_tasks) {
-            condition_variable_ = new std::condition_variable();
             mutex_ = new std::mutex();
             runnable_ = runnable;
             counter_ = -1;
@@ -43,7 +41,6 @@ struct ThreadState {
             num_idle = 0;
         }
         ~ThreadState() {
-            delete condition_variable_;
             delete mutex_;
         }
 };

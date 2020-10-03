@@ -243,7 +243,7 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
     // method in Parts A and B.  The implementation provided below runs all
     // tasks sequentially on the calling thread.
     //
-    thread_state->mutex_->lock();
+    /*thread_state->mutex_->lock();
     thread_state->runnable_ = runnable;
     thread_state->num_total_tasks_ = num_total_tasks;
     thread_state->num_remaining_tasks = num_total_tasks;
@@ -257,7 +257,7 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
     }
 
     std::unique_lock<std::mutex> lk(*mutex_main);
-    cv_main->wait(lk, [this]{return (nFinishedTasks == thread_state->num_total_tasks_);});
+    cv_main->wait(lk, [this]{return (nFinishedTasks == thread_state->num_total_tasks_);});*/
 }
 
 
@@ -269,7 +269,7 @@ TaskSystemParallelThreadPoolSleeping::TaskSystemParallelThreadPoolSleeping(int n
     // (requiring changes to tasksys.h).
     //
     this->num_threads = num_threads;
-    spinning = true;
+    /*spinning = true;
     thread_state = new ThreadState(nullptr, 0);
     thread_state->num_idle = num_threads;
     nFinishedTasks = 0;
@@ -284,7 +284,7 @@ TaskSystemParallelThreadPoolSleeping::TaskSystemParallelThreadPoolSleeping(int n
     }
     for(int i = 0; i < num_threads; i++){
         this->threads[i] = std::thread(&TaskSystemParallelThreadPoolSleeping::waitTask, this, i);
-    }
+    }*/
 }
 
 TaskSystemParallelThreadPoolSleeping::~TaskSystemParallelThreadPoolSleeping() {
