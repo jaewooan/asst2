@@ -267,17 +267,16 @@ void TaskSystemParallelThreadPoolSleeping::signalTask(int iThread){
 void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
     int iTask = 0;
     int nTotTask = 0;
-    std::unique_lock<std::mutex> lk(*mutex_thread_tot);
-    printf("%d wait\n", iThread);
-    cv_thread_tot->wait(lk);
+    std::unique_lock<std::mutex> lk(*mutex_thread[iThread]);
+    cv_thread[iThread]->wait(lk);
     num_idle++;
-    printf("%d wait off\n", iThread);
     while(spinning){
         if(num_idle == num_threads){
             thread_state->mutex_->lock();
             iTask = ++thread_state->counter_;
             nTotTask = thread_state->num_total_tasks_;
             thread_state->mutex_->unlock();
+
             if(iTask < nTotTask){
                 printf("%d task doing task %d\n", iThread, iTask);
                 thread_state->runnable_->runTask(iTask, nTotTask);
@@ -286,10 +285,8 @@ void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
                 thread_state->mutex_->unlock();
             } else{
                 printf("%d wait2\n", iThread);
-                cv_thread_tot->wait(lk);
+                cv_thread[iThread]->wait(lk);
             }
-        } else{
-            cv_thread_tot->notify_all();
         }
     }
 }
@@ -302,20 +299,21 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
     //
 
     // make all threads wait before starting assignment
-    thread_state->mutex_->lock();
+    mutex_thread_tot->lock();
     thread_state->runnable_ = runnable;
     thread_state->num_total_tasks_ = num_total_tasks;
     thread_state->num_remaining_tasks = num_total_tasks;
     thread_state->counter_ = -1;
     nFinishedTasks = 0;
     num_idle2 = 0;
-    thread_state->mutex_->unlock();
+    mutex_thread_tot->unlock();
 
-    std::unique_lock<std::mutex> lk(*mutex_thread_tot);
-    //cv_thread_tot->notify_all();
-
+    for(int i=0; i<num_threads; i++){
+        cv_thread[i]->notify_all();
+    }
 
     printf("before\n");
+    std::unique_lock<std::mutex> lk(*mutex_main);
     cv_main->wait(lk, [this]{return (nFinishedTasks == thread_state->num_total_tasks_);});
     printf("after\n");
 }
