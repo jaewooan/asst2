@@ -94,8 +94,9 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
                                 const std::vector<TaskID>& deps);
         void sync();
         int num_threads;
+        int num_finished_tasks = 0;
         std::vector<int> nFinishedTasks;
-        int num_idle_init = 0;
+        int num_idle_init;
         std::vector<int> num_idle;
         std::vector<int> num_idle2;
         int num_idle3;
@@ -108,6 +109,8 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         std::mutex* mutex_thread_tot;
         std::mutex* mutex_thread_share;
         std::mutex* mutex_thread_main;
+        std::mutex* mutex_signal;
+        std::condition_variable* cv_signal;
         std::condition_variable* cv_thread_main;
         std::condition_variable* cv_thread_tot;
         std::condition_variable* cv_thread_share;
@@ -118,8 +121,11 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         bool isAllWait = false;
         std::vector<bool> isAllReleased;
         std::vector<bool> isReady = {false,false};
-
+        bool isInitialized = false;
+        bool isRun = false;
         bool isAllReleasedInit = false;
+        std::vector<bool> isWait;
+        std::vector<bool> isInterateDone;
         int iRun = 0;;
         void waitTask(int iThread);
         void signalTask(int iThread);
