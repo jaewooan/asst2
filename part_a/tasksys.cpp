@@ -211,6 +211,7 @@ TaskSystemParallelThreadPoolSleeping::TaskSystemParallelThreadPoolSleeping(int n
     this->num_threads = num_threads;
     spinning = true;
     thread_state = new ThreadState(nullptr, 0);
+    num_idle_wait = 0;
     num_idle_init = num_threads - 1;
     threads = new std::thread[num_threads];
     cv_thread = std::vector<std::condition_variable*>(num_threads);
@@ -269,10 +270,14 @@ void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
         //printf("100000. wait reached %d \n", iThread);
         std::unique_lock<std::mutex> lk(*mutex_thread_tot);
         isWait[iThread] = true;
+        num_idle_wait++;
+        cv_main->notify_all();
         cv_thread_tot->wait(lk, [&]{ return (!isInterateDone[iThread] && (num_idle_threads[iThread]==0)) || !spinning;});
         num_idle_threads[iThread] = 0;
         num_finished_tasks_threads[iThread] = 0;
         isWait[iThread] = false;
+        num_idle_init = 0;
+        num_idle_wait = 0;
         lk.unlock();
 
         nFinishTask = 0;
@@ -290,11 +295,11 @@ void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
             else{
                 mutex_thread[iThread]->lock();
                 num_idle_threads[iThread] = ++nIdleLocal;
+                num_idle_init++;
                 num_finished_tasks_threads[iThread] = nFinishTask;
                 isInterateDone[iThread] = true;
                 //printf("7. finish worker %d with finished task %d and idles %d\n", iThread, num_finished_tasks_threads[iThread], num_idle_threads[iThread]);
                 mutex_thread[iThread]->unlock();
-                cv_main->notify_all();
                 break;
             }
         } // finish simulation for the given case
@@ -318,6 +323,7 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
     thread_state->counter_ = -1;
     num_finished_tasks = 0;
     num_idle_init = 0;
+    num_idle_wait = 0;
     for(int i=0; i<num_threads; i++){
         num_finished_tasks_threads[i] = 0;
         num_idle_threads[i] = 0;
@@ -342,7 +348,7 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
             //printf("2. releasing threads \n");
             std::unique_lock<std::mutex> lk(*mutex_main);
             cv_thread_tot->notify_all();
-            cv_main->wait(lk);
+            cv_main->wait(lk, [this]{return num_idle_wait == num_threads;});
             lk.unlock();
             //printf("3. wait unitl work is done\n");
             break;
@@ -350,6 +356,7 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
     }
 
     //printf("4. waiting operation\n");
+    /*
     while(true){
         bool isAllWait = true;
         num_finished_tasks = 0;
@@ -365,7 +372,7 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
             //printf("5. ALl are stop again\n");
             break;
         }
-    }
+    }*/
 }
 
 TaskID TaskSystemParallelThreadPoolSleeping::runAsyncWithDeps(IRunnable* runnable, int num_total_tasks,

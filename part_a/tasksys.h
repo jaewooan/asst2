@@ -108,6 +108,7 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         std::vector<int> num_idle_threads;
         //std::vector<int> nFinishedTasks;
         int num_idle_init;
+        int num_idle_wait;
         //int num_idle_result;
         //std::vector<int> num_idle;
         //std::vector<int> num_idle2;
