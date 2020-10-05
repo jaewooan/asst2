@@ -120,13 +120,13 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         std::mutex* mutex_main2;
         std::condition_variable* cv_main1;
         std::condition_variable* cv_main2;
-        //std::mutex* mutex_thread_tot;
+        std::mutex* mutex_thread_tot;
         std::mutex* mutex_thread_share;
         //std::mutex* mutex_thread_main;
         std::mutex* mutex_signal;
         std::condition_variable* cv_signal;
         //std::condition_variable* cv_thread_main;
-        //std::condition_variable* cv_thread_tot;
+        std::condition_variable* cv_thread_tot;
         //std::condition_variable* cv_thread_share;
         std::vector<std::mutex*> mutex_thread;
         std::vector<std::condition_variable*> cv_thread;
@@ -138,7 +138,7 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         bool isInitialized = false;
         //bool isRun = false;
         //bool isAllReleasedInit = false;
-        //std::vector<bool> isWait;
+        std::vector<bool> isWait;
         std::vector<bool> isInterateDone;
         //int iRun = 0;;
         void waitTask(int iThread);
