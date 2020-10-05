@@ -327,6 +327,7 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
             mutex_thread_tot->lock();
             isAllWait = isAllWait && isWait[i];
             mutex_thread_tot->unlock();
+            if(!isAllWait) break;
         }
         if(isAllWait){
             for(int i = 0; i < num_threads; i++){
@@ -350,8 +351,9 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
             num_idle_init += num_idle_threads[i];
             num_finished_tasks += num_finished_tasks_threads[i];
             isAllWait = isAllWait && isWait[i];
+            if(!isAllWait) break;
         }
-        bool isFinished = (num_idle_init == num_threads) && (num_finished_tasks == thread_state->num_total_tasks_) && isAllWait;
+        bool isFinished = isAllWait && (num_idle_init == num_threads) && (num_finished_tasks == thread_state->num_total_tasks_);
         if(isFinished) {
             //printf("4. ALl are stop again\n");
             break;
