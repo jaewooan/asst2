@@ -5,7 +5,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
-
+#include <unordered_set>
 /*
  * TaskSystemSerial: This class is the student's implementation of a
  * serial task execution engine.  See definition of ITaskSystem in
@@ -101,27 +101,6 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         TaskID runAsyncWithDeps(IRunnable* runnable, int num_total_tasks,
                                 const std::vector<TaskID>& deps);
         void sync();
-        int num_threads;
-        int nFinishedTasks;
-        int num_idle;
-        int num_idle2;
-        bool isFullyIdle = false;
-        std::thread* threads;
-        ThreadState* thread_state;
-        bool spinning;
-        std::mutex* mutex_main;
-        std::condition_variable* cv_main;
-        std::mutex* mutex_thread_tot;
-        std::mutex* mutex_thread_share;
-        std::condition_variable* cv_thread_tot;
-        std::condition_variable* cv_thread_share;
-        std::vector<std::mutex*> mutex_thread;
-        std::vector<std::condition_variable*> cv_thread;
-        bool on_thread_tot_wait = false;
-        bool on_thread_share_wait = false;
-        bool isReady = false;
-        void waitTask(int iThread);
-        void signalTask(int iThread);
 };
 
 #endif

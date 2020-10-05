@@ -201,6 +201,7 @@ const char* TaskSystemParallelThreadPoolSleeping::name() {
     return "Parallel + Thread Pool + Sleep";
 }
 
+<<<<<<< HEAD
 /*void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
     int iTask = 0;
     int nTotTask = 0;
@@ -475,6 +476,8 @@ void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
     }
 }*/
 /*
+=======
+>>>>>>> 24fd82aa6eba32459953679c77ed1be6a0992f26
 void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_total_tasks) {
 
 
@@ -484,37 +487,12 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
     // tasks sequentially on the calling thread.
     //
 
-    // make all threads wait before starting assignment
-    std::unique_lock<std::mutex> lk2(*mutex_thread_tot);
-   // printf("thread_tot start \n");
-    on_thread_tot_wait = true;
-    cv_thread_tot->wait(lk2, [this]{
-        printf("wait is changed\n");
-        return isFullyIdle;});
-
-    thread_state->mutex_->lock();
-    thread_state->runnable_ = runnable;
-    thread_state->num_total_tasks_ = num_total_tasks;
-    thread_state->num_remaining_tasks = num_total_tasks;
-    thread_state->counter_ = -1;
-    nFinishedTasks = 0;
-    num_idle2 = 0;
-    thread_state->mutex_->unlock();
-
-
-    //printf("start releasing with mum idle %d \n", num_idle);
-    for(int i = 0; i < num_threads; i++){
-        cv_thread[i]->notify_all();
+    for (int i = 0; i < num_total_tasks; i++) {
+        runnable->runTask(i, num_total_tasks);
     }
-    //printf("finish releasing with mum idle %d \n", num_idle);
+}
 
-    std::unique_lock<std::mutex> lk(*mutex_main);
-    printf("before\n");
-    cv_main->wait(lk, [this]{return (nFinishedTasks == thread_state->num_total_tasks_);});
-    printf("after\n");
-}*/
 
-/*
 TaskSystemParallelThreadPoolSleeping::TaskSystemParallelThreadPoolSleeping(int num_threads): ITaskSystem(num_threads) {
     //
     // TODO: CS149 student implementations may decide to perform setup
@@ -522,28 +500,7 @@ TaskSystemParallelThreadPoolSleeping::TaskSystemParallelThreadPoolSleeping(int n
     // Implementations are free to add new class member variables
     // (requiring changes to tasksys.h).
     //
-    this->num_threads = num_threads;
-    spinning = true;
-    thread_state = new ThreadState(nullptr, 0);
-    num_idle = 0;
-    nFinishedTasks = 0;
-    threads = new std::thread[num_threads];
-    cv_main = new std::condition_variable();
-    cv_thread_share = new std::condition_variable();
-    cv_thread_tot = new std::condition_variable();
-    cv_thread = std::vector<std::condition_variable*>(num_threads);
-    mutex_main = new std::mutex();
-    mutex_thread_share = new std::mutex();
-    mutex_thread_tot = new std::mutex();
-    mutex_thread = std::vector<std::mutex*>(num_threads);
-    for(int i=0; i < num_threads; i++){
-        cv_thread[i] = new std::condition_variable();
-        mutex_thread[i] = new std::mutex();
-    }
-    for(int i = 0; i < num_threads; i++){
-        this->threads[i] = std::thread(&TaskSystemParallelThreadPoolSleeping::waitTask, this, i);
-    }
-}*/
+}
 
 TaskSystemParallelThreadPoolSleeping::~TaskSystemParallelThreadPoolSleeping() {
     //
@@ -552,16 +509,6 @@ TaskSystemParallelThreadPoolSleeping::~TaskSystemParallelThreadPoolSleeping() {
     // Implementations are free to add new class member variables
     // (requiring changes to tasksys.h).
     //
-    this->spinning = false;
-    for (int i = 0; i < this->num_threads; i++) {
-        thread_state->mutex_->lock();
-        thread_state->counter_ = -1;
-        cv_thread[i]->notify_all(); // release wait
-        thread_state->mutex_->unlock();
-        this->threads[i].join();
-    }
-    delete thread_state;
-    delete[] threads;
 }
 
 
