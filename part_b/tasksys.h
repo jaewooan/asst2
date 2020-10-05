@@ -95,8 +95,11 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         void sync();
         int num_threads;
         int num_finished_tasks = 0;
+        std::vector<int> num_finished_tasks_threads;
+        std::vector<int> num_idle_threads;
         std::vector<int> nFinishedTasks;
         int num_idle_init;
+        int num_idle_result;
         std::vector<int> num_idle;
         std::vector<int> num_idle2;
         int num_idle3;
@@ -104,8 +107,10 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         std::thread* threads;
         ThreadState* thread_state;
         bool spinning;
-        std::mutex* mutex_main;
-        std::condition_variable* cv_main;
+        std::mutex* mutex_main1;
+        std::mutex* mutex_main2;
+        std::condition_variable* cv_main1;
+        std::condition_variable* cv_main2;
         std::mutex* mutex_thread_tot;
         std::mutex* mutex_thread_share;
         std::mutex* mutex_thread_main;
