@@ -270,6 +270,7 @@ void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
     std::unique_lock<std::mutex> lk(*mutex_thread[iThread]);
     cv_thread[iThread]->wait(lk);
     num_idle++;
+    mutex_thread[iThread]->unlock();
     while(spinning){
         if(num_idle == num_threads){
             thread_state->mutex_->lock();
