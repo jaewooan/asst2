@@ -340,20 +340,13 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
                 mutex_thread_tot->unlock();
             }
             //printf("2. releasing threads \n");
+            std::unique_lock<std::mutex> lk(*mutex_main);
             cv_thread_tot->notify_all();
+            cv_main->wait(lk);
+            lk.unlock();
+            //printf("3. wait unitl work is done\n");
             break;
         }
-    }
-
-    mutex_thread_tot->lock();
-    bool isRun = (thread_state->counter_ < thread_state->num_total_tasks_ / num_threads);
-    mutex_thread_tot->unlock();
-    if(isRun){
-        //printf("3. wait in \n");
-        std::unique_lock<std::mutex> lk(*mutex_main);
-        cv_main->wait(lk);
-        lk.unlock();
-        //printf("3. wait unitl work is done\n");
     }
 
     //printf("4. waiting operation\n");
