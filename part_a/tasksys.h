@@ -141,6 +141,7 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         std::vector<bool> isWait;
         std::vector<bool> isInterateDone;
         //int iRun = 0;;
+        void waitTask_dynamic(int iThread);
         void waitTask(int iThread);
         void signalTask(int iThread);
         //std::vector<std::unordered_set<int>> wait_thread;
