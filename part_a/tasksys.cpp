@@ -213,14 +213,8 @@ TaskSystemParallelThreadPoolSleeping::TaskSystemParallelThreadPoolSleeping(int n
     thread_state = new ThreadState(nullptr, 0);
     num_idle_init = num_threads - 1;
     threads = new std::thread[num_threads];
-    cv_main1 = new std::condition_variable();
-    cv_main2 = new std::condition_variable();
     cv_thread = std::vector<std::condition_variable*>(num_threads);
-    cv_signal = new std::condition_variable();
-    mutex_main1 = new std::mutex();
-    mutex_main2 = new std::mutex();
     mutex_thread_share = new std::mutex();
-    mutex_signal = new std::mutex();
     mutex_thread = std::vector<std::mutex*>(num_threads);
     for(int i=0; i < num_threads; i++){
         isWait.push_back(true);
@@ -234,6 +228,12 @@ TaskSystemParallelThreadPoolSleeping::TaskSystemParallelThreadPoolSleeping(int n
     cv_thread_tot = new std::condition_variable();
     mutex_thread_tot = new std::mutex();
     /*
+    cv_main1 = new std::condition_variable();
+    cv_main2 = new std::condition_variable();
+    cv_signal = new std::condition_variable();
+    mutex_main1 = new std::mutex();
+    mutex_signal = new std::mutex();
+    mutex_main2 = new std::mutex();
     num_idle = {0,0};
     num_idle2 = {0,0};
     nFinishedTasks = {0,0};
@@ -267,7 +267,7 @@ TaskSystemParallelThreadPoolSleeping::~TaskSystemParallelThreadPoolSleeping() {
     for (int i = 0; i < this->num_threads; i++) {
         thread_state->mutex_->lock();
         thread_state->counter_ = -1;
-        isInitialized = true;
+        //isInitialized = true;
         isInterateDone[i] = false;
         cv_thread_tot->notify_all(); // release wait
         thread_state->mutex_->unlock();
@@ -295,7 +295,6 @@ void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
         num_finished_tasks_threads[iThread] = 0;
         isWait[iThread] = false;
         lk.unlock();
-        if(!spinning) break;
 
         //printf("6. initializng worker %d with num_idle_init %d\n", iThread, num_idle_init);
 
@@ -392,9 +391,9 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
         }
     }
 
-    mutex_thread_share->lock();
-    isInitialized = false;
-    mutex_thread_share->unlock();
+    //mutex_thread_share->lock();
+    //isInitialized = false;
+    //mutex_thread_share->unlock();
     //printf("//////////////////////////////////////////////////////////////\n");
 }
 
