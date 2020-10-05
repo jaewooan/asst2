@@ -258,6 +258,8 @@ TaskSystemParallelThreadPoolSleeping::~TaskSystemParallelThreadPoolSleeping() {
 void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
     int iTask = 0;
     int nTotTask = 0;
+    int nFinishTask = 0;
+    int nIdleLocal = 0;
 
     while(spinning){
         // Stop before initialization(When initialization is finished, isInitialized is true, when calculation is finished, this becomes false at cv_main->wait)
@@ -271,6 +273,8 @@ void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
         isWait[iThread] = false;
         lk.unlock();
 
+        nFinishTask = 0;
+        nIdleLocal = 0;
         //printf("6. initializng worker %d with num_idle_init %d\n", iThread, num_idle_init);
         while(spinning){ // run simulation
             mutex_thread_share->lock();
@@ -279,14 +283,13 @@ void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
             mutex_thread_share->unlock();
             if(iTask < nTotTask){
                 thread_state->runnable_->runTask(iTask, nTotTask);
-                mutex_thread[iThread]->lock();
-                num_idle_threads[iThread] = 0;
-                num_finished_tasks_threads[iThread]++;
-                mutex_thread[iThread]->unlock();
+                nFinishTask++;
+                nIdleLocal = 0;
             }
             else{
                 mutex_thread[iThread]->lock();
-                num_idle_threads[iThread]++;
+                num_idle_threads[iThread] = ++nIdleLocal;
+                num_finished_tasks_threads[iThread] = nFinishTask;
                 //printf("7. finish worker %d with finished task %d and idles %d\n", iThread, num_finished_tasks_threads[iThread], num_idle_threads[iThread]);
                 isInterateDone[iThread] = true;
                 mutex_thread[iThread]->unlock();
@@ -308,7 +311,6 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
 
     //printf("/////////////////////////////////////////////////////////////\n");
     mutex_thread_share->lock();
-    //iRun++;
     thread_state->runnable_ = runnable;
     thread_state->num_total_tasks_ = num_total_tasks;
     thread_state->counter_ = -1;
