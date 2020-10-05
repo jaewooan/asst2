@@ -227,29 +227,7 @@ TaskSystemParallelThreadPoolSleeping::TaskSystemParallelThreadPoolSleeping(int n
 
     cv_thread_tot = new std::condition_variable();
     mutex_thread_tot = new std::mutex();
-    /*
-    cv_main1 = new std::condition_variable();
-    cv_main2 = new std::condition_variable();
-    cv_signal = new std::condition_variable();
-    mutex_main1 = new std::mutex();
-    mutex_signal = new std::mutex();
-    mutex_main2 = new std::mutex();
-    num_idle = {0,0};
-    num_idle2 = {0,0};
-    nFinishedTasks = {0,0};
-    cv_thread_share = new std::condition_variable();
-    cv_thread_main = new std::condition_variable();
-    mutex_thread_main = new std::mutex();
-    */
-    //for(int i = 1; i < num_threads; i++){
-    //    wait_thread_init.insert(i);
-    //}
-    //for(int i=0; i<2; i++)
-    //    wait_thread.push_back(wait_thread_init);
 
-    //isAllReleased = {false, false};
-
-    //this->threads[0] = std::thread(&TaskSystemParallelThreadPoolSleeping::signalTask, this, 0);
     for(int i = 0; i < num_threads; i++){
         this->threads[i] = std::thread(&TaskSystemParallelThreadPoolSleeping::waitTask, this, i);
     }
@@ -267,7 +245,6 @@ TaskSystemParallelThreadPoolSleeping::~TaskSystemParallelThreadPoolSleeping() {
     for (int i = 0; i < this->num_threads; i++) {
         thread_state->mutex_->lock();
         thread_state->counter_ = -1;
-        //isInitialized = true;
         isInterateDone[i] = false;
         cv_thread_tot->notify_all(); // release wait
         thread_state->mutex_->unlock();
@@ -281,13 +258,11 @@ TaskSystemParallelThreadPoolSleeping::~TaskSystemParallelThreadPoolSleeping() {
 void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
     int iTask = 0;
     int nTotTask = 0;
-    //int iRunCurrent = 1;
 
     while(spinning){
         // Stop before initialization(When initialization is finished, isInitialized is true, when calculation is finished, this becomes false at cv_main->wait)
 
         //printf("100000. wait reached %d \n", iThread);
-        //std::unique_lock<std::mutex> lk(*mutex_thread[iThread]);
         std::unique_lock<std::mutex> lk(*mutex_thread_tot);
         isWait[iThread] = true;
         cv_thread_tot->wait(lk, [&]{ return (!isInterateDone[iThread] && (num_idle_threads[iThread]==0)) || !spinning;});
@@ -297,8 +272,6 @@ void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
         lk.unlock();
 
         //printf("6. initializng worker %d with num_idle_init %d\n", iThread, num_idle_init);
-
-
         while(spinning){ // run simulation
             mutex_thread_share->lock();
             iTask = ++thread_state->counter_;
@@ -341,17 +314,11 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
     thread_state->counter_ = -1;
     num_finished_tasks = 0;
     num_idle_init = 0;
-    //nFinishedTasks[iRun%2] = 0;
-    //isReady[iRun%2] = true;
-    //wait_thread[iRun%2].clear();
     for(int i=0; i<num_threads; i++){
         num_finished_tasks_threads[i] = 0;
         num_idle_threads[i] = 0;
-        //wait_thread[iRun%2].insert(i);
     }
-    //isAllReleased[iRun%2] = true;
     mutex_thread_share->unlock();
-
 
     //printf("1. Notifying initialization\n");
     while(true){
@@ -390,11 +357,6 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
             break;
         }
     }
-
-    //mutex_thread_share->lock();
-    //isInitialized = false;
-    //mutex_thread_share->unlock();
-    //printf("//////////////////////////////////////////////////////////////\n");
 }
 
 TaskID TaskSystemParallelThreadPoolSleeping::runAsyncWithDeps(IRunnable* runnable, int num_total_tasks,
