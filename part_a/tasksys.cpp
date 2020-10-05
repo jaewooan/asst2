@@ -214,6 +214,7 @@ TaskSystemParallelThreadPoolSleeping::TaskSystemParallelThreadPoolSleeping(int n
     num_idle_init = num_threads - 1;
     threads = new std::thread[num_threads];
     cv_thread = std::vector<std::condition_variable*>(num_threads);
+    mutex_main = new std::mutex();
     mutex_thread_share = new std::mutex();
     mutex_thread = std::vector<std::mutex*>(num_threads);
     for(int i=0; i < num_threads; i++){
@@ -226,6 +227,7 @@ TaskSystemParallelThreadPoolSleeping::TaskSystemParallelThreadPoolSleeping(int n
     }
 
     cv_thread_tot = new std::condition_variable();
+    cv_main = new std::condition_variable();
     mutex_thread_tot = new std::mutex();
 
     for(int i = 0; i < num_threads; i++){
@@ -284,15 +286,15 @@ void TaskSystemParallelThreadPoolSleeping::waitTask(int iThread){
             if(iTask < nTotTask){
                 thread_state->runnable_->runTask(iTask, nTotTask);
                 nFinishTask++;
-                nIdleLocal = 0;
             }
             else{
                 mutex_thread[iThread]->lock();
                 num_idle_threads[iThread] = ++nIdleLocal;
                 num_finished_tasks_threads[iThread] = nFinishTask;
-                //printf("7. finish worker %d with finished task %d and idles %d\n", iThread, num_finished_tasks_threads[iThread], num_idle_threads[iThread]);
                 isInterateDone[iThread] = true;
+                //printf("7. finish worker %d with finished task %d and idles %d\n", iThread, num_finished_tasks_threads[iThread], num_idle_threads[iThread]);
                 mutex_thread[iThread]->unlock();
+                cv_main->notify_all();
                 break;
             }
         } // finish simulation for the given case
@@ -343,8 +345,17 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
         }
     }
 
+    mutex_thread_tot->lock();
+    bool isRun = (thread_state->counter_ < thread_state->num_total_tasks_ / 2);
+    mutex_thread_tot->unlock();
+    if(isRun){
+        std::unique_lock<std::mutex> lk(*mutex_main);
+        cv_main->wait(lk);
+        lk.unlock();
+        //printf("3. wait unitl work is done\n");
+    }
 
-    //printf("3. waiting operation\n");
+    //printf("4. waiting operation\n");
     while(true){
         bool isAllWait = true;
         num_finished_tasks = 0;
@@ -357,7 +368,7 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
         }
         bool isFinished = isAllWait && (num_idle_init == num_threads) && (num_finished_tasks == thread_state->num_total_tasks_);
         if(isFinished) {
-            //printf("4. ALl are stop again\n");
+            //printf("5. ALl are stop again\n");
             break;
         }
     }
