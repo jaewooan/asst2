@@ -116,9 +116,9 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         std::thread* threads;
         ThreadState* thread_state;
         bool spinning;
-        //std::mutex* mutex_main1;
+        std::mutex* mutex_main;
         //std::mutex* mutex_main2;
-        //std::condition_variable* cv_main1;
+        std::condition_variable* cv_main;
         //std::condition_variable* cv_main2;
         std::mutex* mutex_thread_tot;
         std::mutex* mutex_thread_share;
