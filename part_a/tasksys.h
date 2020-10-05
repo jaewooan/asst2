@@ -5,7 +5,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
-
+#include <unordered_set>
 /*
  * TaskSystemSerial: This class is the student's implementation of a
  * serial task execution engine.  See definition of ITaskSystem in
@@ -102,9 +102,11 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
                                 const std::vector<TaskID>& deps);
         void sync();
         int num_threads;
-        int nFinishedTasks;
-        int num_idle;
-        int num_idle2;
+        std::vector<int> nFinishedTasks;
+        int num_idle_init = 0;
+        std::vector<int> num_idle;
+        std::vector<int> num_idle2;
+        int num_idle3;
         bool isFullyIdle = false;
         std::thread* threads;
         ThreadState* thread_state;
@@ -113,15 +115,24 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         std::condition_variable* cv_main;
         std::mutex* mutex_thread_tot;
         std::mutex* mutex_thread_share;
+        std::mutex* mutex_thread_main;
+        std::condition_variable* cv_thread_main;
         std::condition_variable* cv_thread_tot;
         std::condition_variable* cv_thread_share;
         std::vector<std::mutex*> mutex_thread;
         std::vector<std::condition_variable*> cv_thread;
         bool on_thread_tot_wait = false;
         bool on_thread_share_wait = false;
-        bool isReady = false;
+        bool isAllWait = false;
+        std::vector<bool> isAllReleased;
+        std::vector<bool> isReady = {false,false};
+
+        bool isAllReleasedInit = false;
+        int iRun = 0;;
         void waitTask(int iThread);
         void signalTask(int iThread);
+        std::vector<std::unordered_set<int>> wait_thread;
+        std::unordered_set<int> wait_thread_init;
 };
 
 #endif
