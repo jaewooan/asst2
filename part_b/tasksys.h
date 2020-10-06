@@ -9,6 +9,7 @@
 #include <queue>
 #include <unordered_map>
 #include <set>
+#include <iostream>
 
 class ThreadState{
 public:
@@ -171,6 +172,7 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         std::vector<TaskState*> vecTask;
 
         std::set<TaskID> set_waiting_ID;
+        std::set<TaskID> set_removed_ID;
         std::queue<TaskID> q_working_ID;
         std::queue<TaskState*> q_task_waiting;
         std::queue<TaskState*> q_task_working;
@@ -180,6 +182,32 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         std::unordered_map<TaskID, int> map_n_tot_taskID;
         bool isAtSync = false;
         void runFunction(int iThread);
+
+        void printqueue(std::queue<TaskID> Q){
+            std::cout<<"Queue element are..."<< std::endl;
+            while(!Q.empty()){
+              std::cout<<" "<<Q.front()<<", ";
+              Q.pop();
+             }
+            std::cout<<std::endl;
+        };
+
+        void printvector(std::vector<TaskID> V){
+            std::cout<<"Vector element are..."<< std::endl;
+            for(int i=0; i < V.size(); i++)
+              std::cout<<" "<<V[i]<<", ";
+            std::cout<<std::endl;
+
+        };
+
+
+        void printset(std::set<TaskID> S){
+            std::cout<<"Set element are..."<< std::endl;
+            for(int i:S)
+              std::cout<<" "<<i <<", ";
+            std::cout<<std::endl;
+
+        };
 
 };
 #endif
