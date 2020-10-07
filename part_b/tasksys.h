@@ -134,17 +134,15 @@ class TaskState {
             std::unique_lock<std::mutex> lk(*mutex_barrier);
             ++num_finished_threads;
             ++num_finished_threads_wait;
-            printf("///////////////start block in %d thread at task %d with target %d with wait %d\n",
-                   iThread, taskID_local, taskID, num_finished_threads_wait);
+            //printf("///////////////start block in %d thread at task %d with target %d with wait %d\n", iThread, taskID_local, taskID, num_finished_threads_wait);
             cv_barrier->wait(lk, [&]{return (num_finished_threads >= numThreads);});
             cv_barrier->notify_one();
             --num_finished_threads_wait;
-            printf("///////////////finis block in %d thread at task %d with target %d with wait %d\n",
-                   iThread, taskID_local, taskID, num_finished_threads_wait);
+            //printf("///////////////finis block in %d thread at task %d with target %d with wait %d\n", iThread, taskID_local, taskID, num_finished_threads_wait);
             if(num_finished_threads_wait == 0)
             {
                //reset barrier
-               printf("4. Reset barrier of task %d and changed into new task %d \n", taskID_local, taskID);
+               //printf("4. Reset barrier of task %d and changed into new task %d \n", taskID_local, taskID);
                num_finished_threads = 0;
             }
             lk.unlock();
@@ -154,7 +152,7 @@ class TaskState {
             std::unique_lock<std::mutex> lk(*mutex_barrier);
             ++num_finished_threads;
             ++num_finished_threads_wait;
-            printf("!!!!!!!!!!!!!Stop %d thread with task %d\n", iThread, taskID_local);
+            //printf("!!!!!!!!!!!!!Stop %d thread with task %d\n", iThread, taskID_local);
             cv_barrier->wait(lk,[]{return false;});
             lk.unlock();
         }
@@ -239,6 +237,7 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         int num_finished_threads;
         int num_finished_threads_wait;
         bool isAtSync = false;
+        bool isSync = false;
         void runFunction(int iThread);
 
         void printqueue(std::queue<TaskID> Q){
@@ -271,17 +270,15 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
             std::unique_lock<std::mutex> lk(*mutex_barrier);
             ++num_finished_threads;
             ++num_finished_threads_wait;
-            printf("///////////////start block in %d thread at initial with target %d with wait %d\n",
-                   iThread, taskID_local, num_finished_threads_wait);
+            //printf("///////////////start block in %d thread at initial with target %d with wait %d\n", iThread, taskID_local, num_finished_threads_wait);
             cv_barrier->wait(lk, [&]{return (num_finished_threads >= num_threads);});
             cv_barrier->notify_one();
             --num_finished_threads_wait;
-            printf("///////////////finis block in %d thread at initial with target %d with wait %d\n",
-                   iThread, taskID_local, num_finished_threads_wait);
+            //printf("///////////////finis block in %d thread at initial with target %d with wait %d\n", iThread, taskID_local, num_finished_threads_wait);
             if(num_finished_threads_wait == 0)
             {
                //reset barrier
-               printf("4. Reset barrier of task %d\n", taskID_local);
+               //printf("4. Reset barrier of task %d\n", taskID_local);
                num_finished_threads = 0;
             }
             lk.unlock();
