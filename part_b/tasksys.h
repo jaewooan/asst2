@@ -11,26 +11,6 @@
 #include <set>
 #include <iostream>
 
-class ThreadState{
-public:
-    IRunnable* runnable_;
-    std::mutex* mutex_;
-    int num_total_tasks_;
-    int num_remaining_tasks;
-    int counter_;
-    ThreadState(IRunnable* runnable, int num_total_tasks) {
-        mutex_ = new std::mutex();
-        runnable_ = runnable;
-        counter_ = -1;
-        num_total_tasks_ = num_total_tasks;
-        num_remaining_tasks = num_total_tasks;
-    }
-    ~ThreadState() {
-        delete mutex_;
-    }
-};
-
-
 /*
  * TaskSystemSerial: This class is the student's implementation of a
  * serial task execution engine.  See definition of ITaskSystem in
@@ -171,12 +151,7 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
                                 const std::vector<TaskID>& deps);
         void sync();
         int num_threads;
-        int num_finished_tasks = 0;
-        std::vector<int> num_finished_tasks_threads;
-        std::vector<int> num_idle_threads;
-        int num_idle_init;
         std::thread* threads;
-        ThreadState* thread_state;
         bool spinning;
         std::mutex* mutex_main;
         std::mutex* mutex_working;
@@ -187,12 +162,6 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         std::mutex* mutex_thread_tot;
         std::mutex* mutex_thread_share;
         std::mutex* mutex_barrier;
-        std::condition_variable* cv_thread_tot;
-        std::vector<std::mutex*> mutex_thread;
-        std::vector<std::condition_variable*> cv_thread;
-        std::vector<bool> isWait;
-        std::vector<bool> isInterateDone;
-        void waitTask(int iThread);
 
         // For dependency
         std::vector<TaskState*> vecTask;
@@ -200,44 +169,15 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         std::set<TaskID> set_waiting_ID;
         std::set<TaskID> set_removed_ID;
         std::vector<TaskID> q_working_ID;
-        std::queue<TaskState*> q_task_waiting;
-        std::queue<TaskState*> q_task_working;
         std::unordered_map<TaskID, std::vector<TaskID>> map_indep_to_dep;
-        std::unordered_map<TaskID, std::vector<TaskID>> map_to_dep;
-        std::unordered_map<TaskID, IRunnable*> map_runnable;
-        std::unordered_map<TaskID, int> map_n_tot_taskID;
         int num_finished_threads;
         int num_finished_threads_wait;
         bool isAtSync = false;
         bool isSync = false;
         void runFunction(int iThread);
 
-        void printqueue(std::queue<TaskID> Q){
-            std::cout<<"Queue element are..."<< std::endl;
-            while(!Q.empty()){
-              std::cout<<" "<<Q.front()<<", ";
-              Q.pop();
-             }
-            std::cout<<std::endl;
-        };
-
 
         void block(int iThread, int taskID_local){
-            std::unique_lock<std::mutex> lk(*mutex_barrier);
-            ++num_finished_threads;
-            ++num_finished_threads_wait;
-            cv_barrier->wait(lk, [&]{return (num_finished_threads >= num_threads);});
-            cv_barrier->notify_one();
-            --num_finished_threads_wait;
-            if(num_finished_threads_wait == 0)
-            {
-               //reset barrier
-               num_finished_threads = 0;
-            }
-            lk.unlock();
-        };
-
-        void block_final(int iThread, int taskID_local){
             std::unique_lock<std::mutex> lk(*mutex_barrier);
             ++num_finished_threads;
             ++num_finished_threads_wait;

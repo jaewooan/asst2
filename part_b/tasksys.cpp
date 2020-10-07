@@ -138,28 +138,15 @@ TaskSystemParallelThreadPoolSleeping::TaskSystemParallelThreadPoolSleeping(int n
     //
     this->num_threads = num_threads;
     spinning = true;
-    thread_state = new ThreadState(nullptr, 0);
-    num_idle_init = num_threads - 1;
     threads = new std::thread[num_threads];
-    cv_thread = std::vector<std::condition_variable*>(num_threads);
     cv_barrier = new std::condition_variable();
     mutex_main = new std::mutex();
     mutex_thread_share = new std::mutex();
-    mutex_thread = std::vector<std::mutex*>(num_threads);
     mutex_working = new std::mutex();
     mutex_waiting = new std::mutex();
     mutex_removing = new std::mutex();
     mutex_barrier = new std::mutex();
-    for(int i=0; i < num_threads; i++){
-        isWait.push_back(true);
-        isInterateDone.push_back(true);
-        num_finished_tasks_threads.push_back(0);
-        num_idle_threads.push_back(0);
-        cv_thread[i] = new std::condition_variable();
-        mutex_thread[i] = new std::mutex();
-    }
 
-    cv_thread_tot = new std::condition_variable();
     cv_main = new std::condition_variable();
     mutex_thread_tot = new std::mutex();
     vecTask = {};
@@ -204,12 +191,7 @@ TaskSystemParallelThreadPoolSleeping::~TaskSystemParallelThreadPoolSleeping() {
     //
     this->spinning = false;
     for (int i = 0; i < this->num_threads; i++) {
-        thread_state->mutex_->lock();
-        thread_state->counter_ = -1;
-        isInterateDone[i] = false;
-        cv_thread_tot->notify_all(); // release wait
         vecTask[vecTask.size()-1]->cv_barrier->notify_all();
-        thread_state->mutex_->unlock();
         this->threads[i].join();
     }
 
@@ -217,12 +199,6 @@ TaskSystemParallelThreadPoolSleeping::~TaskSystemParallelThreadPoolSleeping() {
         free(vecTask[i]);
     }
     vecTask.clear();
-
-    for (int i = 0; i < this->num_threads; i++) {
-        delete mutex_thread[i];
-        delete cv_thread[i];
-    }
-
 
     delete mutex_main;
     delete cv_main;
@@ -232,8 +208,6 @@ TaskSystemParallelThreadPoolSleeping::~TaskSystemParallelThreadPoolSleeping() {
     delete mutex_thread_tot;
     delete mutex_thread_share;
     delete mutex_barrier;
-    delete cv_thread_tot;
-    delete thread_state;
     delete[] threads;
 }
 
@@ -423,7 +397,7 @@ void TaskSystemParallelThreadPoolSleeping::runFunction(int iThread){
             }
         }
     }
-    block_final(iThread, -1);
+    block(iThread, -1);
 }
 
 void TaskSystemParallelThreadPoolSleeping::sync() {
@@ -434,7 +408,6 @@ void TaskSystemParallelThreadPoolSleeping::sync() {
 
     std::unique_lock<std::mutex> lk(*mutex_main);
     isAtSync = true;
-    cv_thread_tot->notify_all();
 
     cv_main->wait(lk, [this]{return q_working_ID.empty() && set_waiting_ID.empty();});
     lk.unlock();
