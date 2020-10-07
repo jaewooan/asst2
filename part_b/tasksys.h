@@ -85,6 +85,7 @@ class TaskState {
     public:
         IRunnable* runnable;
         std::mutex* mutex;
+        std::mutex* mutex_count;
         std::condition_variable* cv;
         int num_total_tasks;
         int num_remaining_tasks;
@@ -94,6 +95,7 @@ class TaskState {
         std::vector<TaskID> vecDependentOn; // the current task is dependent on:
         TaskState(IRunnable* runnable, int num_total_tasks, int taskID, const std::vector<TaskID>& deps) {
             this->mutex = new std::mutex();
+            this->mutex_count = new std::mutex();
             this->cv = new std::condition_variable();
             this->runnable = runnable;
             this->counter = -1;
@@ -105,6 +107,9 @@ class TaskState {
         }
         ~TaskState() {
             delete mutex;
+            delete mutex_count;
+            delete cv;
+            delete runnable;
         }
 };
 
@@ -173,7 +178,7 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
 
         std::set<TaskID> set_waiting_ID;
         std::set<TaskID> set_removed_ID;
-        std::queue<TaskID> q_working_ID;
+        std::vector<TaskID> q_working_ID;
         std::queue<TaskState*> q_task_waiting;
         std::queue<TaskState*> q_task_working;
         std::unordered_map<TaskID, std::vector<TaskID>> map_indep_to_dep;
