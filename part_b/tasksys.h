@@ -92,6 +92,7 @@ class TaskState {
         int counter;
         int taskID;
         int nFinishedThread;
+        int nWaitingThread;
         std::vector<TaskID> vecDependentOn; // the current task is dependent on:
         TaskState(IRunnable* runnable, int num_total_tasks, int taskID, const std::vector<TaskID>& deps) {
             this->mutex = new std::mutex();
@@ -104,6 +105,7 @@ class TaskState {
             this->taskID = taskID;
             this->vecDependentOn =deps;
             this->nFinishedThread = 0;
+            this->nWaitingThread = 0;
         }
         ~TaskState() {
             delete mutex;
@@ -135,7 +137,8 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         std::vector<int> num_idle_threads;
         //std::vector<int> nFinishedTasks;
         int num_idle_init;
-        int num_idle_wait;
+        int num_finished_threads_wait;
+        int num_finished_threads;
         //int num_idle_result;
         //std::vector<int> num_idle;
         //std::vector<int> num_idle2;
@@ -145,8 +148,13 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         ThreadState* thread_state;
         bool spinning;
         std::mutex* mutex_main;
+        std::mutex* mutex_working;
+        std::mutex* mutex_waiting;
+        std::mutex* mutex_removing;
+        std::mutex* mutex_barrier;
         //std::mutex* mutex_main2;
         std::condition_variable* cv_main;
+        std::condition_variable* cv_barrier;
         //std::condition_variable* cv_main2;
         std::mutex* mutex_thread_tot;
         std::mutex* mutex_thread_share;
