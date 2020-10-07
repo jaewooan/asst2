@@ -64,72 +64,53 @@ class TaskSystemParallelThreadPoolSpinning: public ITaskSystem {
 class TaskState {
     public:
         IRunnable* runnable;
-        std::mutex* mutex;
-        std::mutex* mutex_count;
-        std::condition_variable* cv;
+        std::mutex* mutex; // lock for dependency variables
+        std::mutex* mutex_count; // lock for count
+        std::mutex* mutex_barrier; // lock for block
+        std::condition_variable* cv_barrier; // cv for block
+
+        std::vector<TaskID> vecDependentOn; // the current task is dependent on:
         int num_total_tasks;
-        int num_remaining_tasks;
         int counter;
         int taskID;
-        int nFinishedThread;
-        int nWaitingThread;
         int numThreads;
-        std::vector<TaskID> vecDependentOn; // the current task is dependent on:
+        int num_finished_threads_wait; // for block
+        int num_finished_threads; // for block
 
-
-        std::mutex* mutex_barrier;
-        std::condition_variable* cv_barrier;
-        int num_finished_threads_wait;
-        int num_finished_threads;
         TaskState(IRunnable* runnable, int num_total_tasks, int taskID, const std::vector<TaskID>& deps, int numThreads) {
             this->mutex = new std::mutex();
             this->mutex_count = new std::mutex();
-            this->cv = new std::condition_variable();
+            this->mutex_barrier = new std::mutex();
+            this->cv_barrier = new std::condition_variable();
+            this->vecDependentOn =deps;
             this->runnable = runnable;
             this->counter = -1;
             this->num_total_tasks = num_total_tasks;
-            this->num_remaining_tasks = num_total_tasks;
             this->taskID = taskID;
-            this->vecDependentOn =deps;
-            this->nFinishedThread = 0;
-            this->nWaitingThread = 0;
             this->numThreads = numThreads;
-
-            this->mutex_barrier = new std::mutex();
-            this->cv_barrier = new std::condition_variable();
             this->num_finished_threads_wait = 0;
             this->num_finished_threads = 0;
         }
         ~TaskState() {
             delete mutex;
             delete mutex_count;
-            delete cv;
-            delete runnable;
             delete mutex_barrier;
             delete cv_barrier;
+            delete runnable;
         }
 
-
-        void block(int iThread, int taskID_local){
+        void block(){
             std::unique_lock<std::mutex> lk(*mutex_barrier);
             ++num_finished_threads;
             ++num_finished_threads_wait;
             cv_barrier->wait(lk, [&]{return (num_finished_threads >= numThreads);});
-            cv_barrier->notify_one();
+            cv_barrier->notify_one(); // this will release other block
             --num_finished_threads_wait;
             if(num_finished_threads_wait == 0)
             {
-               //reset barrier
+               // reset barrier
                num_finished_threads = 0;
             }
-            lk.unlock();
-        }
-
-        void stop(int iThread, int taskID_local){
-            std::unique_lock<std::mutex> lk(*mutex_barrier);
-            ++num_finished_threads;
-            ++num_finished_threads_wait;
-            cv_barrier->wait(lk,[]{return false;});
             lk.unlock();
         }
 };
@@ -152,36 +133,36 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         void sync();
         int num_threads;
         std::thread* threads;
-        bool spinning;
-        std::mutex* mutex_main;
-        std::mutex* mutex_working;
-        std::mutex* mutex_waiting;
-        std::mutex* mutex_removing;
-        std::condition_variable* cv_main;
-        std::condition_variable* cv_barrier;
-        std::mutex* mutex_thread_tot;
-        std::mutex* mutex_thread_share;
-        std::mutex* mutex_barrier;
+        bool spinning; // control while loop of workers
+        std::mutex* mutex_at_sync; // lock for sync function
+        std::mutex* mutex_working; // lock for working list
+        std::mutex* mutex_waiting; // lock for waiting list
+        std::mutex* mutex_removing; // lock for removed list
+        std::mutex* mutex_map; // lock for dependency map
+        std::mutex* mutex_shared_task; // lock for tasks
+        std::mutex* mutex_barrier; // lock for barrier (block)
+        std::condition_variable* cv_at_sync; // cv for sync function
+        std::condition_variable* cv_barrier; // cv for barrier
 
         // For dependency
         std::vector<TaskState*> vecTask;
         TaskState* task_current;
-        std::set<TaskID> set_waiting_ID;
-        std::set<TaskID> set_removed_ID;
-        std::vector<TaskID> q_working_ID;
-        std::unordered_map<TaskID, std::vector<TaskID>> map_indep_to_dep;
-        int num_finished_threads;
-        int num_finished_threads_wait;
-        bool isAtSync = false;
-        bool isSync = false;
-        void runFunction(int iThread);
+        std::set<TaskID> set_waiting_ID; // waiting list
+        std::set<TaskID> set_removed_ID; // removed list
+        std::vector<TaskID> v_working_ID; // working list
+        std::unordered_map<TaskID, std::vector<TaskID>> map_indep_to_dep; // dependency map
+        int num_finished_threads; // for block
+        int num_finished_threads_wait; // for block
+        bool isAtSyncStatus = false; // indicating if in sync status
+        bool isSyncRun = false; // indicating if the current test is synchro or not.
+        void workers(int iThread); // worker thread function
 
 
-        void block(int iThread, int taskID_local){
+        void block(){
             std::unique_lock<std::mutex> lk(*mutex_barrier);
             ++num_finished_threads;
             ++num_finished_threads_wait;
-            cv_barrier->wait(lk, [&]{return (num_finished_threads >= num_threads);});
+            cv_barrier->wait(lk, [&]{return (num_finished_threads >= num_threads);}); // released when all threads become waiting
             cv_barrier->notify_one();
             --num_finished_threads_wait;
             if(num_finished_threads_wait == 0)
