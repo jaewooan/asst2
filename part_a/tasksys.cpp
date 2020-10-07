@@ -216,17 +216,13 @@ TaskSystemParallelThreadPoolSleeping::TaskSystemParallelThreadPoolSleeping(int n
     mutex_at_sync = new std::mutex();
     mutex_shared_task = new std::mutex();
     mutex_working = new std::mutex();
-    mutex_waiting = new std::mutex();
     mutex_removing = new std::mutex();
     mutex_barrier = new std::mutex();
 
     cv_at_sync = new std::condition_variable();
-    mutex_map = new std::mutex();
     vecTask = {};
     set_removed_ID = {};
     v_working_ID = {};
-    map_indep_to_dep = {};
-    isSyncRun = true;
 
     num_finished_threads = 0;
     num_finished_threads_wait = 0;
@@ -257,8 +253,6 @@ TaskSystemParallelThreadPoolSleeping::~TaskSystemParallelThreadPoolSleeping() {
     delete cv_at_sync;
     delete cv_barrier;
     delete mutex_working;
-    delete mutex_waiting;
-    delete mutex_map;
     delete mutex_shared_task;
     delete mutex_barrier;
     delete[] threads;
@@ -272,9 +266,8 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
 
     // Define task
     mutex_shared_task->lock();
-    isSyncRun = true;
     int taskID_current = vecTask.size();
-    vecTask.push_back(new TaskState(runnable, num_total_tasks, taskID_current, {}, num_threads));
+    vecTask.push_back(new TaskState(runnable, num_total_tasks, taskID_current, num_threads));
     mutex_shared_task->unlock();
 
     // Insert task into working list
@@ -285,7 +278,7 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
     // Wait until the current job is finished.
     std::unique_lock<std::mutex> lk(*mutex_at_sync);
     isAtSyncStatus = true; // indicating the main thread is at wait of sync function.
-    cv_at_sync->wait(lk, [this]{return v_working_ID.empty() && set_waiting_ID.empty();});
+    cv_at_sync->wait(lk, [this]{return v_working_ID.empty();});
     lk.unlock();
 
     return;
@@ -307,11 +300,9 @@ void TaskSystemParallelThreadPoolSleeping::block(){
 };
 
 void TaskSystemParallelThreadPoolSleeping::workers(){
-    bool isSyncRun_ = isSyncRun; // Indicating if the current run is syncrho
     block(); // Start all threads together
     while(spinning){
         mutex_working->lock();
-        isSyncRun_ = isSyncRun;// Indicating if the current run is syncrho
         bool isEmpty = v_working_ID.empty();
         if(!isEmpty){ // if tasks are in working list, run the task.
             // 1. Extract task data
@@ -349,17 +340,10 @@ void TaskSystemParallelThreadPoolSleeping::workers(){
                 set_removed_ID.insert(taskID_current);
                 mutex_removing->unlock();
             }
-        } else{ // if no task, check if main thread is on sync function
+        } else{ // if no task, check if main thread is on sync
             mutex_working->unlock();
-
-            // Check if it is prepared for exiting sync function
-            mutex_waiting->lock();
-            bool isSyncPrepare = isAtSyncStatus && set_waiting_ID.empty();
-            mutex_waiting->unlock();
-
-            if(isSyncPrepare){ // at synchronization
+            if(isAtSyncStatus){ // at synchronization
                 cv_at_sync->notify_all(); // release wait at sync function
-                if(!isSyncRun_) break; // for asyncrho, finish this worker
             }
         }
     }
