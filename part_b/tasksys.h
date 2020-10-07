@@ -131,6 +131,9 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         TaskID runAsyncWithDeps(IRunnable* runnable, int num_total_tasks,
                                 const std::vector<TaskID>& deps);
         void sync();
+        void workers(); // worker thread function
+        void block(); // barrier
+
         int num_threads;
         std::thread* threads;
         bool spinning; // control while loop of workers
@@ -155,23 +158,6 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
         int num_finished_threads_wait; // for block
         bool isAtSyncStatus = false; // indicating if in sync status
         bool isSyncRun = false; // indicating if the current test is synchro or not.
-        void workers(int iThread); // worker thread function
-
-
-        void block(){
-            std::unique_lock<std::mutex> lk(*mutex_barrier);
-            ++num_finished_threads;
-            ++num_finished_threads_wait;
-            cv_barrier->wait(lk, [&]{return (num_finished_threads >= num_threads);}); // released when all threads become waiting
-            cv_barrier->notify_one();
-            --num_finished_threads_wait;
-            if(num_finished_threads_wait == 0)
-            {
-               //reset barrier
-               num_finished_threads = 0;
-            }
-            lk.unlock();
-        };
 
 };
 #endif
