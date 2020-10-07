@@ -425,6 +425,7 @@ void TaskSystemParallelThreadPoolSleeping::runFunction(int iThread){
     //printf("                               Wait release on running the first task with %d\n", iThread);
     //lk.unlock();
 
+    block(iThread, 0);
     while(spinning){
         // If working queue is not empty, run task
         printf("00000. before lock %d\n", iThread);
@@ -452,23 +453,7 @@ void TaskSystemParallelThreadPoolSleeping::runFunction(int iThread){
                     //vecTask[taskID_local]->mutex->lock();
                     //vecTask[taskID_local]->nFinishedThread++;
                     //vecTask[taskID_local]->mutex->unlock();
-
-
-                    std::unique_lock<std::mutex> lk(*mutex_barrier);
-                    ++num_finished_threads;
-                    ++num_finished_threads_wait;
-                    printf("4. Fnish simulation of  task %d in thread %d with finished %d\n", taskID_local, iThread, nFinishTask);
-                    cv_barrier->wait(lk, [this]{return (num_finished_threads >= num_threads) || !spinning;});
-                    printf("4. Release barrier of thread %d with task %d \n", iThread, taskID_local);
-                    cv_barrier->notify_one();
-                    --num_finished_threads_wait;
-                    if(num_finished_threads_wait == 0)
-                    {
-                       //reset barrier
-                       num_finished_threads = 0;
-                       printf("4. Reset barrier of task %d \n", taskID_local);
-                    }
-                    lk.unlock();
+                    block(iThread, taskID_local);
 
                     break;
                 }

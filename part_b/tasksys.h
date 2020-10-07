@@ -222,5 +222,23 @@ class TaskSystemParallelThreadPoolSleeping: public ITaskSystem {
 
         };
 
+        void block(int iThread, int taskID_local){
+            std::unique_lock<std::mutex> lk(*mutex_barrier);
+            ++num_finished_threads;
+            ++num_finished_threads_wait;
+            printf("4. Fnish simulation of  task %d in thread %d with finished\n", taskID_local, iThread);
+            cv_barrier->wait(lk, [this]{return (num_finished_threads >= num_threads) || !spinning;});
+            printf("4. Release barrier of thread %d with task %d \n", iThread, taskID_local);
+            cv_barrier->notify_one();
+            --num_finished_threads_wait;
+            if(num_finished_threads_wait == 0)
+            {
+               //reset barrier
+               num_finished_threads = 0;
+               printf("4. Reset barrier of task %d \n", taskID_local);
+            }
+            lk.unlock();
+        }
+
 };
 #endif
