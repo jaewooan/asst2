@@ -297,23 +297,22 @@ void TaskSystemParallelThreadPoolSleeping::block(){
 };
 
 void TaskSystemParallelThreadPoolSleeping::workers(){
-    // Start when the first input is coming
-    bool isSyncRun_ = isSyncRun;
+    bool isSyncRun_ = isSyncRun; // Indicating if the current run is syncrho
     block(); // Start all threads together
     while(spinning){
         mutex_working->lock();
-        isSyncRun_ = isSyncRun;
+        isSyncRun_ = isSyncRun;// Indicating if the current run is syncrho
         bool isEmpty = v_working_ID.empty();
-        if(!isEmpty){
+        if(!isEmpty){ // if tasks are in working list, run the task.
+            // 1. Extract task data
             TaskID taskID_current = v_working_ID.front();
             mutex_working->unlock();
             mutex_shared_task->lock();
             task_current = vecTask[taskID_current];
             mutex_shared_task->unlock();
             int iTask = 0;
-            int nFinishTask = 0;
 
-            // Run
+            // 2. Run task
             while(spinning){
                 task_current->mutex_count->lock();
                 iTask = ++task_current->counter;
@@ -321,45 +320,31 @@ void TaskSystemParallelThreadPoolSleeping::workers(){
                 task_current->mutex_count->unlock();
                 if(iTask < nTotTask){
                     task_current->runnable->runTask(iTask, nTotTask);
-                    nFinishTask++;
                 } else{
-                    task_current->block();
-
+                    task_current->block(); // if total task is finished, wait for all threads reaching here.
                     break;
                 }
             }
 
-            bool isExist = false;
-            std::vector<TaskID> vecDependent = {};
-
-            if(isSyncRun_){
+            // 3. Remove the finished task from the working list
+            mutex_working->lock();
+            bool isNotDeleted = (!v_working_ID.empty() && v_working_ID[0] == taskID_current); // check if it is not deleted
+            mutex_working->unlock();
+            if(isNotDeleted){
                 mutex_working->lock();
-                bool isExistID = (!v_working_ID.empty() && v_working_ID[0] == taskID_current);
+                v_working_ID.erase(v_working_ID.begin());
                 mutex_working->unlock();
-                if(isExistID){
-                    mutex_working->lock();
-                    v_working_ID.erase(v_working_ID.begin());
-                    mutex_working->unlock();
 
-                    mutex_removing->lock();
-                    set_removed_ID.insert(taskID_current);
-                    mutex_removing->unlock();
-                }
+                mutex_removing->lock();
+                set_removed_ID.insert(taskID_current);
+                mutex_removing->unlock();
             }
-            else{
-                mutex_working->lock();
-                bool isExistID = (!v_working_ID.empty() && v_working_ID[0] == taskID_current);
-                mutex_working->unlock();
-                if(isExistID){
-                    mutex_working->lock();
-                    v_working_ID.erase(v_working_ID.begin());
-                    mutex_working->unlock();
 
-                    mutex_removing->lock();
-                    set_removed_ID.insert(taskID_current);
-                    mutex_removing->unlock();
-                }
-
+            // 4. Additional treatment for dependency (activated only fro asynchro case)
+            if(!isSyncRun_){
+                // 4-1. Check the current ID is still existing in dependency map.
+                bool isExist = false;
+                std::vector<TaskID> vecDependent = {};
                 mutex_map->lock();
                 if(map_indep_to_dep.find(taskID_current) != map_indep_to_dep.end()){
                     isExist = true;
@@ -367,20 +352,22 @@ void TaskSystemParallelThreadPoolSleeping::workers(){
                 }
                 mutex_map->unlock();
 
-                // Remove dependency from others
+                // 4-2. Remove dependency from others
                 if(isExist){
                     for(TaskID IDtask:vecDependent){
-                        if(IDtask < vecTask.size()){
+                        if(IDtask < vecTask.size()){ // if the task data for IDtask is existing,
+                            // Extract data
                             mutex_shared_task->lock();
                             TaskState* task_dependent = vecTask[IDtask];
                             mutex_shared_task->unlock();
-
+                            // Remove dependency
                             task_dependent->mutex->lock();
                             std::vector<TaskID>::iterator it  = std::find(task_dependent->vecDependentOn.begin(), task_dependent->vecDependentOn.end(), taskID_current);
                             if(it!= task_dependent->vecDependentOn.end())
                                 task_dependent->vecDependentOn.erase(it);
                             bool isEmpty = task_dependent->vecDependentOn.empty();
                             task_dependent->mutex->unlock();
+                            // If no dependency, move the task from waiting to working list
                             if(isEmpty){
                                 mutex_waiting->lock();
                                 bool isInsertedData = (set_waiting_ID.end() != set_waiting_ID.find(IDtask));
@@ -398,26 +385,23 @@ void TaskSystemParallelThreadPoolSleeping::workers(){
                             }
                         }
                     }
-                }
+                } // end of 4-2.
             }
-        } else{
+        } else{ // if no task, check if main thread is on sync function
             mutex_working->unlock();
 
+            // Check if it is prepared for exiting sync function
             mutex_waiting->lock();
             bool isSyncPrepare = isAtSyncStatus && set_waiting_ID.empty();
             mutex_waiting->unlock();
 
             if(isSyncPrepare){ // at synchronization
-                //printf("7. Release sync at thread %d\n", iThread);
-                cv_at_sync->notify_all();
-                if(!isSyncRun_) {
-                    //printf("Run out! %d\n", iThread);
-                    break;
-                }
+                cv_at_sync->notify_all(); // release wait at sync function
+                if(!isSyncRun_) break; // for asyncrho, finish this worker
             }
         }
     }
-    block();
+    block(); // waiting for all threads finishing together for the next run.
 }
 
 void TaskSystemParallelThreadPoolSleeping::sync() {
@@ -427,8 +411,7 @@ void TaskSystemParallelThreadPoolSleeping::sync() {
     //
 
     std::unique_lock<std::mutex> lk(*mutex_at_sync);
-    isAtSyncStatus = true;
-
+    isAtSyncStatus = true; // indicating the main thread is at wait of sync function.
     cv_at_sync->wait(lk, [this]{return v_working_ID.empty() && set_waiting_ID.empty();});
     lk.unlock();
 
