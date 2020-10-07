@@ -263,9 +263,9 @@ TaskID TaskSystemParallelThreadPoolSleeping::runAsyncWithDeps(IRunnable* runnabl
 
     // Define task
     mutex_thread_share->lock();
+    isSync = false;
     int taskID_local = vecTask.size();
     vecTask.push_back(new TaskState(runnable, num_total_tasks, taskID_local, deps, num_threads));
-    isSync = false;
     //printf("1. Define task %d with total task %d and %d\n", taskID_local, num_total_tasks, vecTask.size());;
     mutex_thread_share->unlock();
 
@@ -344,6 +344,7 @@ void TaskSystemParallelThreadPoolSleeping::runFunction(int iThread){
     while(spinning){
         // If working queue is not empty, run task
         mutex_working->lock();
+        isSync_ = isSync;
         bool isEmpty = q_working_ID.empty();
         if(!isEmpty){
             TaskID taskID_local = q_working_ID.front();
