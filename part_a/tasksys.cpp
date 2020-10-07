@@ -2,8 +2,9 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
-
-#include <stdio.h>
+#include <queue>
+#include <map>
+#include <algorithm>    // std::find
 
 IRunnable::~IRunnable() {}
 

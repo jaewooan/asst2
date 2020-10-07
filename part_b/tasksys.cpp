@@ -2,7 +2,6 @@
 #include <queue>
 #include <map>
 #include <algorithm>    // std::find
-#include <iostream>
 
 IRunnable::~IRunnable() {}
 

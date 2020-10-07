@@ -5,7 +5,9 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
-#include <unordered_set>
+#include <queue>
+#include <unordered_map>
+#include <set>
 /*
  * TaskSystemSerial: This class is the student's implementation of a
  * serial task execution engine.  See definition of ITaskSystem in
