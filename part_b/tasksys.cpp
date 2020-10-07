@@ -141,9 +141,6 @@ TaskSystemParallelThreadPoolSleeping::TaskSystemParallelThreadPoolSleeping(int n
     spinning = true;
     thread_state = new ThreadState(nullptr, 0);
     num_idle_init = num_threads - 1;
-    num_finished_threads_wait = 0;
-    num_finished_threads = 0;
-    current_id_at_barrier = -1;
     threads = new std::thread[num_threads];
     cv_thread = std::vector<std::condition_variable*>(num_threads);
     cv_barrier = new std::condition_variable();
@@ -171,6 +168,8 @@ TaskSystemParallelThreadPoolSleeping::TaskSystemParallelThreadPoolSleeping(int n
     q_working_ID = {};
     map_indep_to_dep = {};
 
+    num_finished_threads = 0;
+    num_finished_threads_wait = 0;
     for(int i = 0; i < num_threads; i++){
         //this->threads[i] = std::thread(&TaskSystemParallelThreadPoolSleeping::waitTask, this, i);
         this->threads[i] = std::thread(&TaskSystemParallelThreadPoolSleeping::runFunction, this, i);
@@ -304,7 +303,7 @@ TaskSystemParallelThreadPoolSleeping::~TaskSystemParallelThreadPoolSleeping() {
         thread_state->counter_ = -1;
         isInterateDone[i] = false;
         cv_thread_tot->notify_all(); // release wait
-        cv_barrier->notify_all();
+        vecTask[vecTask.size()-1]->cv_barrier->notify_all();
         thread_state->mutex_->unlock();
         this->threads[i].join();
     }
@@ -347,7 +346,7 @@ TaskID TaskSystemParallelThreadPoolSleeping::runAsyncWithDeps(IRunnable* runnabl
     // Define task
     mutex_thread_share->lock();
     int taskID_local = vecTask.size();
-    vecTask.push_back(new TaskState(runnable, num_total_tasks, taskID_local, deps));
+    vecTask.push_back(new TaskState(runnable, num_total_tasks, taskID_local, deps, num_threads));
     //printf("1. Define task %d with total task %d and %d\n", taskID_local, num_total_tasks, vecTask.size());
     mutex_thread_share->unlock();
 
@@ -459,7 +458,7 @@ void TaskSystemParallelThreadPoolSleeping::runFunction(int iThread){
                     //vecTask[taskID_local]->mutex->unlock();
 
                     //printf("4. Fnish simulation of  task %d in thread %d with finished %d\n", taskID_local, iThread, nFinishTask);
-                    block(iThread, taskID_local);
+                    task_current->block(iThread, taskID_local);
                     //printf("4. Release barrier of thread %d with task %d \n", iThread, taskID_local);
 
                     break;
