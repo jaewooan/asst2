@@ -185,7 +185,7 @@ void TaskSystemParallelThreadPoolSleeping::run(IRunnable* runnable, int num_tota
     // run and make resutls
 
     // set current task's id: maybe the maximum number of existing ids.
-    //printf("///////////////////////\n");
+    //printf("/////////////\n");
 
     // Define task
     mutex_thread_share->lock();
@@ -259,7 +259,7 @@ TaskID TaskSystemParallelThreadPoolSleeping::runAsyncWithDeps(IRunnable* runnabl
     // run and make resutls
 
     // set current task's id: maybe the maximum number of existing ids.
-    //printf("///////////////////////\n");
+    //printf("/////////////\n");
 
     // Define task
     mutex_thread_share->lock();
@@ -339,12 +339,7 @@ TaskID TaskSystemParallelThreadPoolSleeping::runAsyncWithDeps(IRunnable* runnabl
 
 void TaskSystemParallelThreadPoolSleeping::runFunction(int iThread){
     // Start when the first input is coming
-    //std::unique_lock<std::mutex> lk(*mutex_thread[iThread]);
-    //printf("                               Wait on running %d the first task\n", iThread);
-    //cv_thread_tot->wait(lk);
-    //printf("                               Wait release on running the first task with %d\n", iThread);
-    //lk.unlock();
-    bool isSync_ = false;
+    bool isSync_ = isSync;
     block(iThread, -1);
     while(spinning){
         // If working queue is not empty, run task
@@ -355,7 +350,6 @@ void TaskSystemParallelThreadPoolSleeping::runFunction(int iThread){
             mutex_working->unlock();
             mutex_thread_share->lock();
             task_current = vecTask[taskID_local];
-            isSync_ = isSync;
             mutex_thread_share->unlock();
             int iTask = 0;
             int nFinishTask = 0;
@@ -372,9 +366,6 @@ void TaskSystemParallelThreadPoolSleeping::runFunction(int iThread){
                     nFinishTask++;
                     //printf("4. Running simulation of task %d in thread %d with finished %d\n", taskID_local, iThread, nFinishTask);
                 } else{
-                    //vecTask[taskID_local]->mutex->lock();
-                    //vecTask[taskID_local]->nFinishedThread++;
-                    //vecTask[taskID_local]->mutex->unlock();
 
                     //printf("4. Fnish simulation of  task %d in thread %d with finished %d\n", taskID_local, iThread, nFinishTask);
                     task_current->block(iThread, taskID_local);
@@ -469,11 +460,6 @@ void TaskSystemParallelThreadPoolSleeping::runFunction(int iThread){
             }
             //printf(" 6. end of while loop true with %d and %d\n", iThread, taskID_local);
         } else{
-            //std::unique_lock<std::mutex> lk2(*mutex_thread_tot);
-            //printf("Wait on running %d with size %d\n", iThread);
-            //cv_thread_tot->wait(lk2, [this]{return !q_working_ID.empty() || !spinning;});
-            //printf("Wait release on running %d\n", iThread);
-            //lk2.unlock();            
             mutex_working->unlock();
 
             mutex_waiting->lock();
@@ -483,11 +469,15 @@ void TaskSystemParallelThreadPoolSleeping::runFunction(int iThread){
             if(isSyncPrepare){ // at synchronization
                 cv_main->notify_all();
                 //printf("7. Release sync at thread %d\n", iThread);
-                if(!isSync_) break;
+                if(!isSync_) {
+                    //printf("Run out! %d\n", iThread);
+                    break;
+                }
             }
         }
     }
     //printf("run func out at thread %d\n", iThread);
+    block_final(iThread, -1);
 }
 
 void TaskSystemParallelThreadPoolSleeping::sync() {
